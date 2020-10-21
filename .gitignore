@@ -1,2 +1,4 @@
 .ipynb_*
 Temp.png
+.DS_Store
+.spyproject*
