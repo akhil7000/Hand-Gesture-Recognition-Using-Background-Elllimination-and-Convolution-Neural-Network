@@ -54,13 +54,21 @@ def segment(image, threshold=25):
 
 def main():
 
-    predictedClass, confidence = getPredictedClass()
+    print("-----------------------------------------")
+    print("-----------------------------------------")
+    print("Predict Image - Eyes -> Open or Closed")
+    print("Enter path of the image to be tested")
+    
+    #PredictData/Test/closed_78.png
+    #PredictData/Test/open_34.png
+    imagePath=input()
+    predictedClass, confidence = getPredictedClass(imagePath)
     showStatistics(predictedClass, confidence)
 
-def getPredictedClass():
+def getPredictedClass(imagePath):
     # Predict
-    resizeImage("PredictData/Test/Closed.png")
-    image = cv2.imread('PredictData/Test/Closed.png')
+    resizeImage(imagePath)
+    image = cv2.imread(imagePath)
     gray_image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
     prediction = model.predict([gray_image.reshape(89, 100, 1)])
     return np.argmax(prediction), (np.amax(prediction) / (prediction[0][0] + prediction[0][1]))
@@ -71,12 +79,13 @@ def showStatistics(predictedClass, confidence):
     className = ""
 
     if predictedClass == 0:
-        className = "ClosedEyes"
-    elif predictedClass == 1:
         className = "OpenEyes"
+    elif predictedClass == 1:
+        className = "ClosedEyes"
 
     print("Image predicted is :"+ className)
-
+    print("-----------------------------------------")
+    print("-----------------------------------------")
 
 
 # Model defined
