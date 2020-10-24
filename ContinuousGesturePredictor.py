@@ -16,7 +16,7 @@ def resizeImage(imageName):
     img = Image.open(imageName)
     wpercent = (basewidth/float(img.size[0]))
     hsize = int((float(img.size[1])*float(wpercent)))
-    img = img.resize((basewidth,hsize), Image.ANTIALIAS)
+    img = img.resize((89,100), Image.ANTIALIAS)
     img.save(imageName)
 
 def run_avg(image, aWeight):
@@ -54,74 +54,110 @@ def segment(image, threshold=25):
         return (thresholded, segmented)
 
 def main():
+    
+    #https://github.com/Itseez/opencv/blob/master/data/haarcascades/haarcascade_frontalface_default.xml
+    face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
+#   https://github.com/Itseez/opencv/blob/master/data/haarcascades/haarcascade_eye.xml
+    eye_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_eye.xml')
+
     # initialize weight for running average
     aWeight = 0.5
 
     # get the reference to the webcam
     camera = cv2.VideoCapture(0)
-
-    # region of interest (ROI) coordinates
-    top, right, bottom, left = 10, 350, 225, 590
-
-    # initialize num of frames
-    num_frames = 0
+# 
+# =============================================================================
+#     # region of interest (ROI) coordinates
+#     top, right, bottom, left = 10, 100, 100, 300
+# 
+#     # initialize num of frames
+#     num_frames = 0
+#     start_recording = False
+# 
+# =============================================================================
+# =============================================================================
+#    # keep looping, until interrupted
+#    while 1:
+#         # get the current frame
+#         (grabbed, frame) = camera.read()
+# 
+#         # resize the frame
+#         frame = imutils.resize(frame, width = 700)
+# 
+#         # flip the frame so that it is not the mirror view
+#         frame = cv2.flip(frame, 1)
+# 
+#         # clone the frame
+#         clone = frame.copy()
+# 
+#         # get the height and width of the frame
+#         (height, width) = frame.shape[:2]
+# 
+#         # get the ROI
+#         roi = frame[top:bottom, right:left]
+# 
+#         # convert the roi to grayscale and blur it
+#         gray = cv2.cvtColor(roi, cv2.COLOR_BGR2GRAY)
+#         gray = cv2.GaussianBlur(gray, (7, 7), 0)
+# 
+#         # to get the background, keep looking till a threshold is reached
+#         # so that our running average model gets calibrated
+#         if num_frames < 30:
+#             run_avg(gray, aWeight)
+#         else:
+#             # segment the hand region
+#             hand = segment(gray)
+# 
+#             # check whether hand region is segmented
+#             if hand is not None:
+#                 # if yes, unpack the thresholded image and
+#                 # segmented region
+#                 (thresholded, segmented) = hand
+# 
+#                 # draw the segmented region and display the frame
+#                 cv2.drawContours(clone, [segmented + (right, top)], -1, (0, 0, 255))
+#                 if start_recording:
+#                     cv2.imwrite('Temp.png', thresholded)
+#                     resizeImage('Temp.png')
+#                     predictedClass, confidence = getPredictedClass()
+#                     showStatistics(predictedClass, confidence)
+#                 cv2.imshow("Thesholded", thresholded)
+# 
+#         # draw the segmented hand
+#         cv2.rectangle(clone, (left, top), (right, bottom), (0,255,0), 2)
+# 
+#         # increment the number of frames
+#         num_frames += 1
+# 
+# =============================================================================
+    
     start_recording = False
+    while 1:       
+        ret, img = camera.read()
+        gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+        faces = face_cascade.detectMultiScale(gray, 1.3, 5)
 
-    # keep looping, until interrupted
-    while(True):
-        # get the current frame
-        (grabbed, frame) = camera.read()
+        for (x,y,w,h) in faces:
+            cv2.rectangle(img,(x,y),(x+w,y+h),(255,0,0),2)
+            roi_gray = gray[y:y+h, x:x+w]
+            roi_color = img[y:y+h, x:x+w]
+            cv2.imwrite('RealTimeData/Temp_Face.png',roi_color)
 
-        # resize the frame
-        frame = imutils.resize(frame, width = 700)
+            eyes = eye_cascade.detectMultiScale(roi_gray)
+            for (ex,ey,ew,eh) in eyes:
+                cv2.rectangle(roi_color,(ex,ey),(ex+ew,ey+eh),(0,255,0),2)
+                roi_eyes_gray = roi_color[ey:ey+eh, ex:ex+ew]
+                roi_eyes_color = roi_color[ey:ey+eh, ex:ex+ew]
+                cv2.imwrite('RealTimeData/Temp_Eye_Color.png',roi_eyes_color)
 
-        # flip the frame so that it is not the mirror view
-        frame = cv2.flip(frame, 1)
 
-        # clone the frame
-        clone = frame.copy()
-
-        # get the height and width of the frame
-        (height, width) = frame.shape[:2]
-
-        # get the ROI
-        roi = frame[top:bottom, right:left]
-
-        # convert the roi to grayscale and blur it
-        gray = cv2.cvtColor(roi, cv2.COLOR_BGR2GRAY)
-        gray = cv2.GaussianBlur(gray, (7, 7), 0)
-
-        # to get the background, keep looking till a threshold is reached
-        # so that our running average model gets calibrated
-        if num_frames < 30:
-            run_avg(gray, aWeight)
-        else:
-            # segment the hand region
-            hand = segment(gray)
-
-            # check whether hand region is segmented
-            if hand is not None:
-                # if yes, unpack the thresholded image and
-                # segmented region
-                (thresholded, segmented) = hand
-
-                # draw the segmented region and display the frame
-                cv2.drawContours(clone, [segmented + (right, top)], -1, (0, 0, 255))
-                if start_recording:
-                    cv2.imwrite('Temp.png', thresholded)
-                    resizeImage('Temp.png')
-                    predictedClass, confidence = getPredictedClass()
-                    showStatistics(predictedClass, confidence)
-                cv2.imshow("Thesholded", thresholded)
-
-        # draw the segmented hand
-        cv2.rectangle(clone, (left, top), (right, bottom), (0,255,0), 2)
-
-        # increment the number of frames
-        num_frames += 1
-
-        # display the frame with segmented hand
-        cv2.imshow("Video Feed", clone)
+        if start_recording:
+            # display the frame with segmented hand
+            cv2.imwrite('RealTimeData/Temp_Eye_Grey.png',roi_eyes_gray)
+            resizeImage('RealTimeData/Temp_Eye_Grey.png')
+            predictedClass, confidence = getPredictedClass()
+            showStatistics(predictedClass, confidence)
+        cv2.imshow('img',img)
 
         # observe the keypress by the user
         keypress = cv2.waitKey(1) & 0xFF
@@ -135,10 +171,10 @@ def main():
 
 def getPredictedClass():
     # Predict
-    image = cv2.imread('Temp.png')
+    image = cv2.imread('RealTimeData/Temp_Eye_Grey.png')
     gray_image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
     prediction = model.predict([gray_image.reshape(89, 100, 1)])
-    return np.argmax(prediction), (np.amax(prediction) / (prediction[0][0] + prediction[0][1] + prediction[0][2]))
+    return np.argmax(prediction), (np.amax(prediction) / (prediction[0][0] + prediction[0][1]))
 
 def showStatistics(predictedClass, confidence):
 
@@ -146,11 +182,9 @@ def showStatistics(predictedClass, confidence):
     className = ""
 
     if predictedClass == 0:
-        className = "Swing"
+        className = "OpenEyes"
     elif predictedClass == 1:
-        className = "Palm"
-    elif predictedClass == 2:
-        className = "Fist"
+        className = "ClosedEyes"
 
     cv2.putText(textImage,"Pedicted Class : " + className, 
     (30, 30), 
@@ -203,6 +237,6 @@ convnet=regression(convnet,optimizer='adam',learning_rate=0.001,loss='categorica
 model=tflearn.DNN(convnet,tensorboard_verbose=0)
 
 # Load Saved Model
-model.load("TrainedModel/GestureRecogModel.tfl")
+model.load("TrainedModel/EyesRecogModel.tfl")
 
 main()
